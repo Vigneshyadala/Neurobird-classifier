@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bird Species Classifier - Vignesh Yadala</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        /* ── HEADER ── */
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { font-size: 2.5rem; color: #1a202c; margin-bottom: 10px; }
+        .subtitle { color: #4a5568; font-size: 1.1rem; margin-bottom: 15px; }
+        .demo-note {
+            background: #ebf4ff; color: #2c5282;
+            padding: 12px 20px; border-radius: 10px;
+            display: inline-block; font-size: 0.95rem;
+        }
+
+        /* ── ARCHITECTURE SECTION ── */
+        .architecture-section {
+            background: #f7fafc; border-radius: 15px;
+            padding: 30px; margin-bottom: 40px;
+        }
+        .section-title { font-size: 1.5rem; color: #2d3748; margin-bottom: 20px; }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px; margin-top: 20px;
+        }
+        .stat-card {
+            background: white; padding: 20px;
+            border-radius: 12px; border-left: 4px solid #667eea;
+        }
+        .stat-label { color: #718096; font-size: 0.9rem; margin-bottom: 5px; }
+        .stat-value { font-size: 2rem; font-weight: bold; color: #2d3748; }
+        .stat-value.green  { color: #48bb78; }
+        .stat-value.blue   { color: #4299e1; }
+        .stat-value.orange { color: #ed8936; }
+        .stat-value.purple { color: #9f7aea; }
+
+        /* ── GPS BANNER ── */
+        .gps-banner {
+            background: linear-gradient(135deg, #1B4332 0%, #40916C 100%);
+            color: white; border-radius: 14px;
+            padding: 22px 28px; margin-bottom: 30px;
+            display: flex; align-items: center;
+            justify-content: space-between; gap: 16px; flex-wrap: wrap;
+        }
+        .gps-info h3 { font-size: 1.1rem; margin-bottom: 6px; }
+        .gps-info p  { font-size: 0.88rem; opacity: 0.85; }
+        .gps-coords {
+            background: rgba(255,255,255,0.15); border-radius: 8px;
+            padding: 8px 14px; font-size: 0.85rem;
+            font-weight: 600; font-family: monospace;
+            min-width: 180px; text-align: center;
+        }
+        .gps-btn {
+            background: #F4A261; color: #1B4332;
+            border: none; padding: 10px 22px;
+            border-radius: 30px; cursor: pointer;
+            font-weight: 600; font-size: 0.9rem;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        .gps-btn:hover { background: #E76F51; color: white; transform: translateY(-1px); }
+        .gps-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── UPLOAD SECTION ── */
+        .upload-section { text-align: center; margin-bottom: 40px; }
+        .upload-label { font-size: 1.3rem; color: #2d3748; margin-bottom: 20px; }
+        .upload-btn {
+            background: #4299e1; color: white;
+            padding: 18px 40px; border: none;
+            border-radius: 12px; font-size: 1.1rem;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .upload-btn:hover {
+            background: #3182ce; transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(66,153,225,0.3);
+        }
+        .info-box {
+            background: #fffaf0; border-left: 4px solid #ed8936;
+            padding: 15px 20px; margin: 20px 0;
+            border-radius: 8px; color: #744210;
+        }
+        input[type="file"] { display: none; }
+
+        /* ── GPS BOOST BUTTON (inside upload) ── */
+        .gps-predict-row {
+            margin-top: 18px;
+            display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+        }
+        .btn-gps-predict {
+            background: #40916C; color: white;
+            padding: 14px 32px; border: none;
+            border-radius: 12px; font-size: 1rem;
+            cursor: pointer; transition: all 0.3s;
+            font-weight: 600;
+        }
+        .btn-gps-predict:hover { background: #2d6a4f; transform: translateY(-2px); }
+        .btn-gps-predict:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── LOCATION BADGE ── */
+        .location-badge {
+            display: inline-block; padding: 4px 12px;
+            border-radius: 20px; font-size: 0.82rem;
+            font-weight: 600; margin-top: 8px;
+            background: #e6fffa; color: #234e52;
+            border: 1px solid #81e6d9;
+        }
+
+        /* ── RESULTS SECTION ── */
+        .results-section {
+            background: #f7fafc; border-radius: 15px;
+            padding: 40px; min-height: 300px;
+        }
+        .results-placeholder { text-align: center; color: #a0aec0; }
+        .result-content { display: none; }
+        .error-display { text-align: center; display: none; }
+        .error-message-box {
+            background: #fff5f5; border: 3px solid #fc8181;
+            color: #c53030; padding: 30px; border-radius: 15px;
+            margin-bottom: 30px; font-size: 1.3rem;
+            font-weight: bold; animation: shake 0.5s ease;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .error-image {
+            max-width: 400px; width: 100%; border-radius: 15px;
+            margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); opacity: 0.6;
+        }
+        .warning-box {
+            padding: 15px 20px; border-radius: 10px;
+            margin-bottom: 20px; font-weight: 600;
+            animation: slideDown 0.3s ease;
+        }
+        .warning-box.error { background: #fff5f5; color: #c53030; border-left: 4px solid #fc8181; }
+        .warning-box.warning { background: #fffaf0; color: #c05621; border-left: 4px solid #f6ad55; }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-image {
+            max-width: 400px; width: 100%; border-radius: 15px;
+            margin: 20px auto; display: block;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .prediction {
+            font-size: 2rem; font-weight: bold;
+            color: #2d3748; margin-bottom: 15px; text-align: center;
+        }
+        .confidence {
+            font-size: 1.3rem; color: #48bb78;
+            font-weight: 600; margin-bottom: 20px; text-align: center;
+        }
+        .confidence.low    { color: #e53e3e; }
+        .confidence.medium { color: #ed8936; }
+
+        .prediction-bar {
+            width: 100%; max-width: 500px; height: 30px;
+            background: #e2e8f0; border-radius: 15px;
+            overflow: hidden; margin: 20px auto;
+        }
+        .prediction-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78, #38a169);
+            transition: width 1s ease; display: flex;
+            align-items: center; justify-content: center;
+            color: white; font-weight: bold; width: 0%;
+        }
+        .prediction-fill.low    { background: linear-gradient(90deg, #fc8181, #e53e3e); }
+        .prediction-fill.medium { background: linear-gradient(90deg, #f6ad55, #ed8936); }
+
+        .top-predictions {
+            margin: 30px 0; max-width: 800px;
+            margin-left: auto; margin-right: auto;
+        }
+        .top-predictions h3 { color: #2d3748; margin-bottom: 15px; text-align: center; }
+        .prediction-item {
+            display: flex; justify-content: space-between;
+            padding: 12px 20px; background: white;
+            margin-bottom: 10px; border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .prediction-rank    { font-weight: bold; color: #667eea; margin-right: 10px; }
+        .prediction-species { flex: 1; color: #2d3748; }
+        .prediction-confidence { color: #48bb78; font-weight: 600; }
+
+        /* ── BIRD DETAILS ── */
+        .bird-details {
+            margin-top: 40px; max-width: 1000px;
+            margin-left: auto; margin-right: auto;
+        }
+        .bird-details-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 25px; border-radius: 12px;
+            margin-bottom: 20px; text-align: center;
+        }
+        .bird-details-header h2 { font-size: 2rem; margin-bottom: 5px; }
+        .scientific-name { font-style: italic; font-size: 1.1rem; opacity: 0.9; }
+
+        .detail-section { border-radius: 10px; margin-bottom: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+        .detail-section:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .detail-header {
+            background: #f7fafc; padding: 18px 25px;
+            cursor: pointer; display: flex;
+            justify-content: space-between; align-items: center;
+            transition: background 0.3s;
+        }
+        .detail-header:hover { background: #edf2f7; }
+        .detail-title {
+            font-size: 1.2rem; font-weight: 600;
+            color: #2d3748; display: flex; align-items: center; gap: 10px;
+        }
+        .detail-icon    { font-size: 1.5rem; }
+        .detail-toggle  { font-size: 1.5rem; color: #667eea; transition: transform 0.3s; }
+        .detail-toggle.active { transform: rotate(180deg); }
+        .detail-content {
+            padding: 25px; line-height: 1.8;
+            color: #4a5568; font-size: 1.05rem;
+            display: none; animation: fadeIn 0.3s ease;
+        }
+        .detail-content.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .quick-facts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px; margin-bottom: 30px;
+        }
+        .quick-fact-card {
+            background: white; padding: 15px; border-radius: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .quick-fact-label { font-size: 0.85rem; color: #718096; margin-bottom: 5px; font-weight: 600; }
+        .quick-fact-value { font-size: 1.1rem; color: #2d3748; font-weight: 600; }
+
+        /* ── LOADING ── */
+        .loading { display: none; text-align: center; color: #4299e1; font-size: 1.2rem; }
+        .loading.active { display: block; }
+        .spinner {
+            border: 4px solid #e2e8f0; border-top: 4px solid #4299e1;
+            border-radius: 50%; width: 40px; height: 40px;
+            animation: spin 1s linear infinite; margin: 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .retry-btn {
+            background: #4299e1; color: white;
+            padding: 15px 35px; border: none; border-radius: 12px;
+            font-size: 1.1rem; cursor: pointer; transition: all 0.3s;
+            margin-top: 20px; display: inline-block;
+        }
+        .retry-btn:hover { background: #3182ce; transform: translateY(-2px); }
+
+        .expand-all-btn {
+            background: #667eea; color: white;
+            padding: 10px 25px; border: none; border-radius: 8px;
+            font-size: 0.95rem; cursor: pointer;
+            margin-bottom: 20px; transition: all 0.3s;
+        }
+        .expand-all-btn:hover { background: #764ba2; }
+
+        /* ── GPS TABS (Nearby / Logbook / Lifelist) ── */
+        .gps-tabs {
+            margin-top: 40px;
+            border-top: 2px solid #e2e8f0; padding-top: 30px;
+        }
+        .gps-tabs-header {
+            display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap;
+        }
+        .gtab-btn {
+            background: #f7fafc; border: 2px solid #e2e8f0;
+            color: #4a5568; padding: 10px 22px; border-radius: 10px;
+            cursor: pointer; font-size: 0.95rem; font-weight: 600;
+            transition: all 0.2s;
+        }
+        .gtab-btn:hover  { border-color: #667eea; color: #667eea; }
+        .gtab-btn.active { background: #667eea; border-color: #667eea; color: white; }
+
+        .gtab-content { display: none; }
+        .gtab-content.active { display: block; }
+
+        /* ── NEARBY SPECIES ── */
+        .nearby-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 16px; background: white;
+            border-radius: 8px; margin-bottom: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.07);
+            border-left: 3px solid #48bb78;
+        }
+        .nearby-item.notable { border-left-color: #ed8936; background: #fffaf0; }
+        .nb-name { font-weight: 600; color: #2d3748; }
+        .nb-loc  { font-size: 0.83rem; color: #718096; margin-top: 3px; }
+        .nearby-badge {
+            background: #ed8936; color: white;
+            padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;
+        }
+
+        /* ── HOTSPOTS ── */
+        .hotspot-item {
+            background: white; padding: 14px 18px; border-radius: 10px;
+            margin-bottom: 10px; cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+            border-left: 4px solid #9f7aea; transition: all 0.2s;
+        }
+        .hotspot-item:hover { transform: translateX(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .hotspot-name { font-weight: 600; color: #2d3748; }
+        .hotspot-meta { font-size: 0.85rem; color: #718096; margin-top: 4px; }
+
+        /* ── LOGBOOK / SIGHTING CARDS ── */
+        .stats-row {
+            display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .stat-mini {
+            background: white; padding: 16px 22px; border-radius: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08); flex: 1; min-width: 120px;
+        }
+        .stat-mini .lbl { font-size: 0.82rem; color: #718096; }
+        .stat-mini .val { font-size: 1.8rem; font-weight: bold; color: #2d3748; }
+
+        .sighting-card {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            background: white; padding: 14px 18px; border-radius: 10px;
+            margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+            border-left: 3px solid #667eea;
+        }
+        .sc-species { font-weight: 700; color: #2d3748; font-size: 1.05rem; }
+        .sc-meta    { font-size: 0.83rem; color: #718096; margin-top: 4px; }
+        .sc-conf    { font-size: 1.3rem; font-weight: bold; color: #48bb78; text-align: right; }
+        .sc-badge   { font-size: 0.78rem; display: inline-block; margin-top: 4px; color: #2d6a4f; }
+        .delete-btn {
+            background: none; border: none; cursor: pointer;
+            font-size: 1rem; color: #e53e3e; margin-top: 6px;
+        }
+
+        /* ── LIFELIST ── */
+        .lifelist-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 14px 24px; border-radius: 10px;
+            font-size: 1.1rem; font-weight: 700;
+            text-align: center; margin-bottom: 20px;
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center; color: #a0aec0; padding: 40px 20px;
+        }
+        .empty-state .es-icon { font-size: 3rem; margin-bottom: 12px; }
+
+        /* ── FOOTER ── */
+        .footer-note {
+            text-align: center; color: #718096;
+            font-size: 0.95rem; margin-top: 40px;
+            padding-top: 30px; border-top: 1px solid #e2e8f0;
+        }
+        .model-file {
+            background: #2d3748; color: #48bb78;
+            padding: 3px 8px; border-radius: 5px;
+            font-family: monospace; font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- ── HEADER ── -->
+    <div class="header">
+        <h1>🦜 Bird Species Classifier</h1>
+        <p class="subtitle">ResNet-50 Model | 200 Species Recognition</p>
+        <div class="demo-note">
+            ✨ Using trained PyTorch model developed by Vignesh Yadala — GPS Edition v2.0
+        </div>
+    </div>
+
+    <!-- ── ARCHITECTURE STATS ── -->
+    <div class="architecture-section">
+        <h2 class="section-title">⚡ Model Architecture</h2>
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-label">Architecture</div>
+                <div class="stat-value blue">ResNet-50</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Bird Species</div>
+                <div class="stat-value green">200</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Training Images</div>
+                <div class="stat-value purple">8,822</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Input Size</div>
+                <div class="stat-value orange">224×224</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── GPS LOCATION BANNER ── -->
+    <div class="gps-banner">
+        <div class="gps-info">
+            <h3>📍 GPS Location Intelligence</h3>
+            <p>Enable GPS to boost accuracy using local eBird sightings data</p>
+        </div>
+        <div class="gps-coords" id="gpsCoordsDisplay">📍 Location not set</div>
+        <button class="gps-btn" id="getLocationBtn" onclick="getLocation()">
+            🌍 Enable GPS
+        </button>
+    </div>
+
+    <!-- ── UPLOAD SECTION ── -->
+    <div class="upload-section">
+        <h3 class="upload-label">📤 Upload Bird Image</h3>
+
+        <div class="info-box">
+            💡 <strong>Tip:</strong> Upload clear, well-lit bird photographs for best results.
+            Enable GPS above for location-boosted predictions!
+        </div>
+
+        <input type="file" id="fileInput" accept="image/*">
+        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+            Choose Image
+        </button>
+
+        <div class="gps-predict-row">
+            <button class="btn-gps-predict" id="predictGpsBtn" onclick="predictWithGPS()" disabled>
+                🌍 Identify with GPS Boost
+            </button>
+        </div>
+
+        <!-- ── AUDIO SECTION ── -->
+        <div style="margin-top:30px; padding:25px; border:2px dashed #48bb78; border-radius:14px; background:#f0faf4;">
+            <h3 style="color:#1B4332; margin-bottom:16px; font-size:1.2rem;">🎵 Bird Call Audio Recognition</h3>
+            <p style="color:#4a5568; font-size:0.9rem; margin-bottom:16px;">Upload a bird call recording to identify the species by sound</p>
+
+            <input type="file" id="audioInput" accept=".wav,.mp3,.flac,.ogg,.m4a">
+            <button class="upload-btn" style="background:#2d6a4f; margin-right:10px;"
+                    onclick="document.getElementById('audioInput').click()">
+                🎤 Choose Audio File
+            </button>
+
+            <audio id="audioPreview" controls style="display:none; width:100%; margin-top:14px; border-radius:8px;"></audio>
+            <div id="audioFileName" style="color:#555; font-size:0.9rem; margin-top:8px;"></div>
+
+            <br>
+            <button class="upload-btn" style="background:#40916c; margin-top:12px;" onclick="sendAudio()">
+                🔍 Identify Bird Call
+            </button>
+
+            <div id="audioResults" style="margin-top:16px;"></div>
+        </div>
+    </div>
+
+    <!-- ── RESULTS SECTION ── -->
+    <div class="results-section" id="resultsSection">
+        <div class="results-placeholder" id="placeholder">
+            <p style="font-size:3rem; margin-bottom:10px;">🦜</p>
+            <p style="font-size:1.2rem; margin-bottom:10px;">Prediction Results</p>
+            <p>Upload an image to see predictions and detailed bird information</p>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing image and loading bird information...</p>
+        </div>
+
+        <!-- Error Display -->
+        <div class="error-display" id="errorDisplay">
+            <div class="error-message-box" id="errorMessage"></div>
+            <img id="errorImage" class="error-image" src="" alt="Uploaded Image">
+            <button class="retry-btn" onclick="resetUpload()">🔄 Try Another Image</button>
+        </div>
+
+        <!-- Success Display -->
+        <div class="result-content" id="resultContent">
+            <div id="warningContainer"></div>
+
+            <!-- GPS location badge (shown after GPS boost) -->
+            <div id="locationBadgeContainer" style="text-align:center; margin-bottom:10px;"></div>
+
+            <img id="resultImage" class="result-image" src="" alt="Uploaded Bird">
+            <div class="prediction"  id="predictionText"></div>
+            <div class="confidence"  id="confidenceText"></div>
+            <div class="prediction-bar">
+                <div class="prediction-fill" id="predictionBar"></div>
+            </div>
+
+            <div class="top-predictions">
+                <h3>🏆 Top 5 Predictions</h3>
+                <div id="topPredictions"></div>
+            </div>
+
+            <!-- Bird Details -->
+            <div class="bird-details" id="birdDetails">
+                <div class="bird-details-header">
+                    <h2 id="birdCommonName">Bird Name</h2>
+                    <p class="scientific-name" id="birdScientificName">Scientific Name</p>
+                </div>
+
+                <button class="expand-all-btn" onclick="toggleAllSections()">
+                    📖 Expand All Sections
+                </button>
+
+                <div class="quick-facts" id="quickFacts"></div>
+
+                <div class="detail-section">
+                    <div class="detail-header" onclick="toggleSection(this)">
+                        <div class="detail-title"><span class="detail-icon">📝</span><span>Description</span></div>
+                        <span class="detail-toggle">▼</span>
+                    </div>
+                    <div class="detail-content" id="description"></div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-header" onclick="toggleSection(this)">
+                        <div class="detail-title"><span class="detail-icon">🔍</span><span>Physical Characteristics</span></div>
+                        <span class="detail-toggle">▼</span>
+                    </div>
+                    <div class="detail-content" id="physical"></div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-header" onclick="toggleSection(this)">
+                        <div class="detail-title"><span class="detail-icon">🌍</span><span>Habitat & Distribution</span></div>
+                        <span class="detail-toggle">▼</span>
+                    </div>
+                    <div class="detail-content" id="habitat"></div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-header" onclick="toggleSection(this)">
+                        <div class="detail-title"><span class="detail-icon">🐦</span><span>Behavior</span></div>
+                        <span class="detail-toggle">▼</span>
+                    </div>
+                    <div class="detail-content" id="behavior"></div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-header" onclick="toggleSection(this)">
+                        <div class="detail-title"><span class="detail-icon">🍽️</span><span>Diet</span></div>
+                        <span class="detail-toggle">▼</span>
+                    </div>
+                    <div class="detail-content" id="diet"></div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-header" onclick="toggleSection(this)">
+                        <div class="detail-title"><span class="detail-icon">🥚</span><span>Breeding</span></div>
+                        <span class="detail-toggle">▼</span>
+                    </div>
+                    <div class="detail-content" id="breeding"></div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-header" onclick="toggleSection(this)">
+                        <div class="detail-title"><span class="detail-icon">🌱</span><span>Conservation Status</span></div>
+                        <span class="detail-toggle">▼</span>
+                    </div>
+                    <div class="detail-content" id="conservation"></div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-header" onclick="toggleSection(this)">
+                        <div class="detail-title"><span class="detail-icon">✨</span><span>Interesting Facts</span></div>
+                        <span class="detail-toggle">▼</span>
+                    </div>
+                    <div class="detail-content" id="facts"></div>
+                </div>
+            </div>
+
+            <div style="text-align:center;">
+                <button class="retry-btn" onclick="resetUpload()">Upload Another Image</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         GPS FEATURE TABS — Nearby / Logbook / Lifelist
+    ══════════════════════════════════════════════════ -->
+    <div class="gps-tabs">
+        <h2 class="section-title">🌍 GPS Features</h2>
+        <div class="gps-tabs-header">
+            <button class="gtab-btn active" onclick="switchGTab('nearby', this)">📍 Nearby Birds</button>
+            <button class="gtab-btn"        onclick="switchGTab('logbook', this)">📒 My Logbook</button>
+            <button class="gtab-btn"        onclick="switchGTab('lifelist', this)">🏆 Lifelist</button>
+        </div>
+
+        <!-- NEARBY TAB -->
+        <div class="gtab-content active" id="gtab-nearby">
+            <div class="info-box" style="margin-bottom:16px;">
+                🐦 Shows birds observed near you in the last 14 days via eBird. Enable GPS first!
+            </div>
+            <button class="upload-btn" style="padding:12px 28px; font-size:0.95rem; margin-bottom:20px;"
+                    onclick="loadNearby()">
+                🔍 Load Nearby Birds
+            </button>
+            <div id="nearbyLoading" style="display:none; color:#4299e1; text-align:center; padding:20px;">
+                <div class="spinner"></div><p>Fetching local bird sightings...</p>
+            </div>
+            <div id="nearbyResults"></div>
+            <div id="hotspotResults" style="margin-top:20px;"></div>
+        </div>
+
+        <!-- LOGBOOK TAB -->
+        <div class="gtab-content" id="gtab-logbook">
+            <div class="stats-row">
+                <div class="stat-mini">
+                    <div class="lbl">Total Sightings</div>
+                    <div class="val" id="statTotal">—</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="lbl">Unique Species</div>
+                    <div class="val" id="statUnique">—</div>
+                </div>
+            </div>
+            <div id="sightingsList">
+                <div class="empty-state">
+                    <div class="es-icon">📒</div>
+                    <p>No sightings yet. Identify birds to build your log!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIFELIST TAB -->
+        <div class="gtab-content" id="gtab-lifelist">
+            <div id="lifelistContent">
+                <div class="empty-state">
+                    <div class="es-icon">🏆</div>
+                    <p>Start identifying birds to build your lifelist!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── FOOTER ── -->
+    <div class="footer-note">
+        This web app uses trained PyTorch ResNet-50 model developed by Vignesh Yadala<br>
+        Model file: <span class="model-file">best_bird_classifier.pth</span> |
+        Dataset: CUB-200-2011 | Accuracy: 70%+ | GPS Edition v2.0
+    </div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  GPS STATE
+// ═══════════════════════════════════════════════════════
+let userLat = null, userLng = null;
+let selectedFile = null;
+
+function getLocation() {
+    const btn = document.getElementById('getLocationBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Getting location...';
+    if (!navigator.geolocation) {
+        alert('Geolocation not supported by this browser.');
+        btn.disabled = false; btn.textContent = '🌍 Enable GPS'; return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            userLat = pos.coords.latitude;
+            userLng = pos.coords.longitude;
+            document.getElementById('gpsCoordsDisplay').textContent =
+                `📍 ${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+            btn.textContent = '✅ GPS Active';
+            btn.style.background = '#48bb78';
+            document.getElementById('predictGpsBtn').disabled = !selectedFile;
+        },
+        err => {
+            alert('Could not get location: ' + err.message);
+            btn.disabled = false; btn.textContent = '🌍 Enable GPS';
+        }
+    );
+}
+
+// ═══════════════════════════════════════════════════════
+//  IMAGE UPLOAD & PREDICTION
+// ═══════════════════════════════════════════════════════
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    selectedFile = file;
+    document.getElementById('predictGpsBtn').disabled = !userLat;
+
+    document.getElementById('placeholder').style.display   = 'none';
+    document.getElementById('resultContent').style.display = 'none';
+    document.getElementById('errorDisplay').style.display  = 'none';
+    document.getElementById('loading').classList.add('active');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    fetch('/predict', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('loading').classList.remove('active');
+            if (data.success) {
+                showResults(data, null);
+            } else {
+                document.getElementById('errorDisplay').style.display = 'block';
+                document.getElementById('errorMessage').textContent = data.error;
+                document.getElementById('errorImage').src = data.image;
+            }
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        })
+        .catch(err => {
+            document.getElementById('loading').classList.remove('active');
+            document.getElementById('placeholder').style.display = 'block';
+            alert('Error: ' + err);
+        });
+});
+
+// ═══════════════════════════════════════════════════════
+//  GPS-BOOSTED PREDICTION
+// ═══════════════════════════════════════════════════════
+async function predictWithGPS() {
+    if (!selectedFile || !userLat) return;
+
+    document.getElementById('placeholder').style.display   = 'none';
+    document.getElementById('resultContent').style.display = 'none';
+    document.getElementById('errorDisplay').style.display  = 'none';
+    document.getElementById('loading').classList.add('active');
+    document.getElementById('loading').querySelector('p').textContent =
+        '🌍 Analyzing with GPS boost...';
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('lat', userLat);
+    formData.append('lng', userLng);
+
+    try {
+        const res  = await fetch('/predict-with-location', { method: 'POST', body: formData });
+        const data = await res.json();
+        document.getElementById('loading').classList.remove('active');
+        document.getElementById('loading').querySelector('p').textContent =
+            'Analyzing image and loading bird information...';
+        if (data.success) {
+            showResults(data, true);
+            // Auto-save sighting
+            saveSighting(data.predictions[0], data.image);
+        } else {
+            document.getElementById('errorDisplay').style.display = 'block';
+            document.getElementById('errorMessage').textContent = data.error || 'GPS prediction failed.';
+        }
+        document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch(err) {
+        document.getElementById('loading').classList.remove('active');
+        alert('GPS Predict error: ' + err.message);
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SHOW RESULTS (shared for both normal + GPS)
+// ═══════════════════════════════════════════════════════
+function showResults(data, gpsBoosted) {
+    document.getElementById('resultContent').style.display = 'block';
+    document.getElementById('warningContainer').innerHTML  = '';
+
+    if (data.warning) {
+        const w = document.createElement('div');
+        w.className = `warning-box ${data.warning_type}`;
+        w.textContent = data.warning;
+        document.getElementById('warningContainer').appendChild(w);
+    }
+
+    document.getElementById('resultImage').src = data.image;
+
+    const top = data.predictions[0];
+    document.getElementById('predictionText').textContent = `Predicted: ${top.species}`;
+    const confEl = document.getElementById('confidenceText');
+    confEl.textContent = `Confidence: ${top.confidence}%`;
+    confEl.className = 'confidence';
+    if (top.confidence < 50) confEl.classList.add('low');
+    else if (top.confidence < 70) confEl.classList.add('medium');
+
+    setTimeout(() => {
+        const bar = document.getElementById('predictionBar');
+        bar.style.width = top.confidence + '%';
+        bar.textContent = top.confidence + '%';
+        bar.className = 'prediction-fill';
+        if (top.confidence < 50) bar.classList.add('low');
+        else if (top.confidence < 70) bar.classList.add('medium');
+    }, 100);
+
+    // Location badge
+    const lbc = document.getElementById('locationBadgeContainer');
+    if (gpsBoosted && top.location_badge) {
+        lbc.innerHTML = `<span class="location-badge">${top.location_badge}</span>`;
+    } else if (gpsBoosted) {
+        lbc.innerHTML = `<span class="location-badge">🌍 GPS Boosted</span>`;
+    } else {
+        lbc.innerHTML = '';
+    }
+
+    // Top 5
+    document.getElementById('topPredictions').innerHTML = data.predictions.map((p, i) => `
+        <div class="prediction-item">
+            <span class="prediction-rank">#${i+1}</span>
+            <span class="prediction-species">${p.species}
+                ${p.location_badge ? `<span style="font-size:0.78rem;color:#2d6a4f;margin-left:8px;">${p.location_badge}</span>` : ''}
+            </span>
+            <span class="prediction-confidence">${p.confidence}%</span>
+        </div>
+    `).join('');
+
+    if (data.bird_info) displayBirdInfo(data.bird_info);
+}
+
+// ═══════════════════════════════════════════════════════
+//  SAVE SIGHTING
+// ═══════════════════════════════════════════════════════
+async function saveSighting(topPred, imageB64) {
+    try {
+        await fetch('/log-sighting', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                species        : topPred.species,
+                confidence     : topPred.confidence,
+                source         : 'image',
+                lat            : userLat,
+                lng            : userLng,
+                location_badge : topPred.location_badge || '',
+            })
+        });
+    } catch { /* silent */ }
+}
+
+// ═══════════════════════════════════════════════════════
+//  AUDIO
+// ═══════════════════════════════════════════════════════
+document.getElementById('audioInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const preview = document.getElementById('audioPreview');
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+    document.getElementById('audioFileName').textContent = 'File: ' + file.name;
+    document.getElementById('audioResults').innerHTML = '';
+});
+
+async function sendAudio() {
+    const input   = document.getElementById('audioInput');
+    const results = document.getElementById('audioResults');
+    if (!input.files[0]) {
+        results.innerHTML = '<p style="color:#c53030;font-weight:600;">Please select an audio file first.</p>';
+        return;
+    }
+    results.innerHTML = '<p style="color:#4299e1;">🎵 Analysing bird call...</p>';
+    const formData = new FormData();
+    formData.append('audio', input.files[0]);
+    try {
+        const res  = await fetch('/predict-audio', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.error) {
+            results.innerHTML = '<p style="color:#c53030;font-weight:600;">Error: ' + data.error + '</p>'; return;
+        }
+        if (data.predictions && data.predictions.length > 0) {
+            const top = data.predictions[0];
+            let html = '<h4 style="color:#1B4332;margin-bottom:10px;">🎵 Top Audio Predictions:</h4>';
+            data.predictions.forEach(function(p, i) {
+                const barW  = Math.min(p.confidence, 100);
+                const color = p.confidence > 60 ? '#48bb78' : p.confidence > 30 ? '#ed8936' : '#fc8181';
+                html += '<div style="background:white;border-radius:8px;padding:12px 16px;margin-bottom:8px;box-shadow:0 2px 6px rgba(0,0,0,0.08);">'
+                      + '<div style="display:flex;justify-content:space-between;margin-bottom:6px;">'
+                      + '<span style="font-weight:600;color:#2d3748;">#' + (i+1) + ' ' + p.species + '</span>'
+                      + '<span style="font-weight:700;color:' + color + ';">' + p.confidence + '%</span>'
+                      + '</div>'
+                      + '<div style="background:#e2e8f0;border-radius:6px;height:8px;overflow:hidden;">'
+                      + '<div style="width:' + barW + '%;height:100%;background:' + color + ';border-radius:6px;"></div>'
+                      + '</div></div>';
+            });
+            results.innerHTML = html;
+
+            document.getElementById('placeholder').style.display   = 'none';
+            document.getElementById('loading').classList.remove('active');
+            document.getElementById('errorDisplay').style.display  = 'none';
+            document.getElementById('resultContent').style.display = 'block';
+            document.getElementById('warningContainer').innerHTML  = '';
+            document.getElementById('locationBadgeContainer').innerHTML = '';
+
+            const resultImg = document.getElementById('resultImage');
+            if (data.image) { resultImg.src = data.image; resultImg.style.display = 'block'; }
+            else { resultImg.style.display = 'none'; }
+
+            document.getElementById('predictionText').textContent = 'Predicted: ' + top.species;
+            document.getElementById('confidenceText').textContent = 'Audio Confidence: ' + top.confidence + '%';
+            const bar = document.getElementById('predictionBar');
+            bar.style.width = Math.min(top.confidence, 100) + '%';
+
+            document.getElementById('topPredictions').innerHTML = data.predictions.map((p, i) => `
+                <div class="prediction-item">
+                    <span class="prediction-rank">#${i+1}</span>
+                    <span class="prediction-species">${p.species}</span>
+                    <span class="prediction-confidence">${p.confidence}%</span>
+                </div>`).join('');
+
+            displayBirdInfo(data.bird_info || {
+                common_name: top.species, scientific_name: 'Identified via audio analysis',
+                description: 'This species was identified from the bird call audio recording.',
+                physical_characteristics: 'Upload a bird image for full physical details.',
+                habitat: 'Upload a bird image for habitat information.',
+                behavior: 'Upload a bird image for behavior information.',
+                diet: 'Upload a bird image for diet information.',
+                breeding: 'Upload a bird image for breeding information.',
+                conservation_status: 'Upload a bird image for conservation status.',
+                interesting_facts: 'Try uploading a bird image for combined identification!',
+                distribution: 'Various regions', size: 'Upload a bird image for size details.',
+                lifespan: 'Upload a bird image for lifespan details.',
+                call: '🎵 Identified from uploaded audio recording'
+            });
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            results.innerHTML = '<p style="color:#718096;">No bird calls detected. Try a clearer recording.</p>';
+        }
+    } catch(err) {
+        results.innerHTML = '<p style="color:#c53030;">Error: ' + err.message + '</p>';
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+//  GPS TABS
+// ═══════════════════════════════════════════════════════
+function switchGTab(tab, btn) {
+    document.querySelectorAll('.gtab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.gtab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('gtab-' + tab).classList.add('active');
+    btn.classList.add('active');
+    if (tab === 'logbook')  loadLogbook();
+    if (tab === 'lifelist') loadLifelist();
+}
+
+// ── NEARBY ──
+async function loadNearby() {
+    if (!userLat) { alert('Please enable GPS first!'); return; }
+    document.getElementById('nearbyLoading').style.display = 'block';
+    document.getElementById('nearbyResults').innerHTML  = '';
+    document.getElementById('hotspotResults').innerHTML = '';
+    try {
+        const [nearbyRes, hotspotsRes] = await Promise.all([
+            fetch(`/nearby-species?lat=${userLat}&lng=${userLng}&radius=50`).then(r => r.json()),
+            fetch(`/hotspots?lat=${userLat}&lng=${userLng}&radius=25`).then(r => r.json()),
+        ]);
+        document.getElementById('nearbyLoading').style.display = 'none';
+
+        if (nearbyRes.success && nearbyRes.species && nearbyRes.species.length > 0) {
+            let html = `<p style="color:#718096;font-size:0.85rem;margin-bottom:12px;">
+                🐦 ${nearbyRes.species_count} species observed in last 14 days within ${nearbyRes.radius_km}km
+                ${nearbyRes.notable_count > 0 ? ' · ⭐ ' + nearbyRes.notable_count + ' rare sightings!' : ''}
+            </p>`;
+            nearbyRes.species.forEach(s => {
+                html += `<div class="nearby-item ${s.notable ? 'notable' : ''}">
+                    <div>
+                        <div class="nb-name">${s.common_name}</div>
+                        <div class="nb-loc">📍 ${s.location} · ${s.last_seen.substring(0,10)}</div>
+                    </div>
+                    ${s.notable ? '<span class="nearby-badge">⭐ Rare</span>' : ''}
+                </div>`;
+            });
+            document.getElementById('nearbyResults').innerHTML = html;
+        } else {
+            document.getElementById('nearbyResults').innerHTML =
+                nearbyRes.api_available === false
+                ? '<div class="info-box">⚠️ eBird API key not configured. Add it to your .env file.</div>'
+                : '<div class="empty-state"><div class="es-icon">🔇</div><p>No recent sightings found in your area.</p></div>';
+        }
+
+        if (hotspotsRes.success && hotspotsRes.hotspots && hotspotsRes.hotspots.length > 0) {
+            let html = '<h4 style="color:#2d3748;margin:20px 0 12px;">📍 Nearby Birding Hotspots</h4><div>';
+            hotspotsRes.hotspots.forEach(h => {
+                html += `<div class="hotspot-item" onclick="window.open('https://ebird.org/hotspot/${h.loc_id}','_blank')">
+                    <div class="hotspot-name">📍 ${h.name}</div>
+                    <div class="hotspot-meta">🐦 ${h.num_species} species ever recorded</div>
+                </div>`;
+            });
+            html += '</div>';
+            document.getElementById('hotspotResults').innerHTML = html;
+        }
+    } catch(err) {
+        document.getElementById('nearbyLoading').style.display = 'none';
+        document.getElementById('nearbyResults').innerHTML =
+            `<div class="warning-box error">Error loading nearby data: ${err.message}</div>`;
+    }
+}
+
+// ── LOGBOOK ──
+async function loadLogbook() {
+    try {
+        const [statsRes, sightingsRes] = await Promise.all([
+            fetch('/sighting-stats').then(r => r.json()),
+            fetch('/my-sightings?limit=30').then(r => r.json()),
+        ]);
+        if (statsRes.success) {
+            document.getElementById('statTotal').textContent  = statsRes.total_sightings;
+            document.getElementById('statUnique').textContent = statsRes.unique_species;
+        }
+        const list = document.getElementById('sightingsList');
+        if (sightingsRes.success && sightingsRes.sightings.length > 0) {
+            list.innerHTML = sightingsRes.sightings.map(s => `
+                <div class="sighting-card" id="sc-${s.id}">
+                    <div style="flex:1;">
+                        <div class="sc-species">${s.species}</div>
+                        <div class="sc-meta">
+                            📅 ${s.date_identified}
+                            ${s.lat ? ' · 📍 ' + parseFloat(s.lat).toFixed(3) + ', ' + parseFloat(s.lng).toFixed(3) : ''}
+                            · 🔍 ${s.source}
+                        </div>
+                        ${s.location_badge ? `<div class="sc-badge">${s.location_badge}</div>` : ''}
+                    </div>
+                    <div>
+                        <div class="sc-conf">${s.confidence}%</div>
+                        <button class="delete-btn" onclick="deleteSighting(${s.id})" title="Delete">🗑️</button>
+                    </div>
+                </div>`).join('');
+        } else {
+            list.innerHTML = '<div class="empty-state"><div class="es-icon">📒</div><p>No sightings yet. Identify birds to build your log!</p></div>';
+        }
+    } catch(err) { console.error('Logbook error:', err); }
+}
+
+async function deleteSighting(id) {
+    if (!confirm('Delete this sighting?')) return;
+    try {
+        const res = await fetch('/my-sightings/' + id, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) { document.getElementById('sc-' + id)?.remove(); loadLogbook(); }
+    } catch { /* silent */ }
+}
+
+// ── LIFELIST ──
+async function loadLifelist() {
+    try {
+        const data = await fetch('/lifelist').then(r => r.json());
+        const container = document.getElementById('lifelistContent');
+        if (data.success && data.lifelist.length > 0) {
+            let html = `<div class="lifelist-badge">🏆 ${data.count} Species Identified</div>`;
+            html += data.lifelist.map((s, i) => `
+                <div class="sighting-card">
+                    <div style="flex:1;">
+                        <div class="sc-species">#${i+1} ${s.species}</div>
+                        <div class="sc-meta">First seen: ${s.first_seen_date} · ${s.total_sightings} sighting${s.total_sightings > 1 ? 's' : ''}</div>
+                        ${s.scientific_name ? `<div class="sc-meta" style="font-style:italic;">${s.scientific_name}</div>` : ''}
+                    </div>
+                    <div class="sc-conf" style="color:#9f7aea;">${s.total_sightings}×</div>
+                </div>`).join('');
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<div class="empty-state"><div class="es-icon">🏆</div><p>Start identifying birds to build your lifelist!</p></div>';
+        }
+    } catch(err) { console.error('Lifelist error:', err); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  BIRD INFO + UI HELPERS
+// ═══════════════════════════════════════════════════════
+function displayBirdInfo(birdInfo) {
+    document.getElementById('birdCommonName').textContent    = birdInfo.common_name;
+    document.getElementById('birdScientificName').textContent = birdInfo.scientific_name;
+    document.getElementById('quickFacts').innerHTML = `
+        <div class="quick-fact-card"><div class="quick-fact-label">Size</div><div class="quick-fact-value">${birdInfo.size}</div></div>
+        <div class="quick-fact-card"><div class="quick-fact-label">Lifespan</div><div class="quick-fact-value">${birdInfo.lifespan}</div></div>
+        <div class="quick-fact-card"><div class="quick-fact-label">Distribution</div><div class="quick-fact-value">${birdInfo.distribution}</div></div>
+        <div class="quick-fact-card"><div class="quick-fact-label">Call</div><div class="quick-fact-value">${birdInfo.call}</div></div>`;
+    document.getElementById('description').textContent  = birdInfo.description;
+    document.getElementById('physical').textContent     = birdInfo.physical_characteristics;
+    document.getElementById('habitat').textContent      = birdInfo.habitat;
+    document.getElementById('behavior').textContent     = birdInfo.behavior;
+    document.getElementById('diet').textContent         = birdInfo.diet;
+    document.getElementById('breeding').textContent     = birdInfo.breeding;
+    document.getElementById('conservation').textContent = birdInfo.conservation_status;
+    document.getElementById('facts').textContent        = birdInfo.interesting_facts;
+}
+
+function toggleSection(header) {
+    const content = header.nextElementSibling;
+    const toggle  = header.querySelector('.detail-toggle');
+    content.classList.toggle('active');
+    toggle.classList.toggle('active');
+}
+
+function toggleAllSections() {
+    const sections = document.querySelectorAll('.detail-content');
+    const toggles  = document.querySelectorAll('.detail-toggle');
+    const btn      = event.target;
+    const allExpanded = Array.from(sections).every(s => s.classList.contains('active'));
+    if (allExpanded) {
+        sections.forEach(s => s.classList.remove('active'));
+        toggles.forEach(t  => t.classList.remove('active'));
+        btn.textContent = '📖 Expand All Sections';
+    } else {
+        sections.forEach(s => s.classList.add('active'));
+        toggles.forEach(t  => t.classList.add('active'));
+        btn.textContent = '📕 Collapse All Sections';
+    }
+}
+
+function resetUpload() {
+    selectedFile = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('resultContent').style.display = 'none';
+    document.getElementById('errorDisplay').style.display  = 'none';
+    document.getElementById('loading').classList.remove('active');
+    document.getElementById('placeholder').style.display   = 'block';
+    document.getElementById('predictGpsBtn').disabled = true;
+    document.querySelector('.upload-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+</script>
+</body>
+</html>
