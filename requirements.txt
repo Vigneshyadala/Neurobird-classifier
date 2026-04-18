@@ -6,4 +6,5 @@ librosa
 Pillow 
 requests 
 numpy 
-gunicorn
+gunicorn 
+python-dotenv
