@@ -65,6 +65,8 @@ class_names        = None
 general_classifier = None
 
 
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  STARTUP BANNER
 # ─────────────────────────────────────────────────────────────────────────────
@@ -300,6 +302,12 @@ def get_bird_image_b64(species_name):
     except Exception as e:
         print(f"  [WARN] Could not load bird image: {e}")
         return None
+
+
+# ── Initialize at gunicorn startup ────────────────────────────────────────────
+print_banner()
+init_db()
+load_model()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
